@@ -1,0 +1,4 @@
+# ROS compile folders
+build/*
+install/*
+log/*
