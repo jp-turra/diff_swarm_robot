@@ -17,7 +17,7 @@ if(BUILD_TESTING)
 endif()
 
 install(
-  DIRECTORY launch urdf
+  DIRECTORY launch urdf config
   DESTINATION share/${PROJECT_NAME}/
 )
 
