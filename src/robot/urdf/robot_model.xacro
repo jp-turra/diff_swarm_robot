@@ -180,6 +180,41 @@
         <origin xyz="0.03 0.0 0.015" rpy="0.0 0.0 0.0"/>
     </joint>
 
+    <!-- SENSORS -->
+    <sensor name="ultrasound" type="ray">
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <pose>0.0 0.0 0.05 0 0 0</pose>
+        <update_rate>50</update_rate>
+        <ray>
+            <scan>
+                <horizontal>
+                    <samples>5</samples>
+                    <resolution>1.0</resolution>
+                    <min_angle>-0.18</min_angle>
+                    <max_angle>0.18</max_angle>
+                </horizontal>
+                <vertical>
+                    <samples>5</samples>
+                    <resolution>1.0</resolution>
+                    <min_angle>-0.01</min_angle>
+                    <max_angle>0.01</max_angle>
+                </vertical>
+            </scan>
+            <range>
+                <min>0.02</min>
+                <max>8</max>
+                <resolution>0.01</resolution>
+            </range>
+            <noise>
+                <type>gaussian</type>
+                <mean>0.0</mean>
+                <stddev>0.01</stddev>
+            </noise>
+        </ray>
+        <material>Gazebo/Blue</material>
+    </sensor>
+
     <!-- Gazebo Plugins -->
     <gazebo>
         <plugin name="ignition::gazebo::systems::DiffDrive" 
@@ -196,6 +231,15 @@
             <odom_publish_frequency>5</odom_publish_frequency>
 
             <topic>cmd_vel</topic>
+        </plugin>
+        <plugin name="bytes_ultrasound" filename="libgazebo_ros_ray_sensor.so">
+            <ros>
+                <namespace>distance</namespace>
+                <remapping>~/out:=ultrasonic</remapping>
+            </ros>
+            <output_type>sensor_msgs/Range</output_type>
+            <radiation_type>ultrasound</radiation_type>
+            <frame_name>ultrasonic_dist_sensor</frame_name>
         </plugin>
     </gazebo>
 
