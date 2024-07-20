@@ -2,3 +2,6 @@
 build/*
 install/*
 log/*
+
+# VS Code settings
+.vscode/
