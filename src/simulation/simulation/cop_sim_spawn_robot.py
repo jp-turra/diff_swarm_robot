@@ -23,7 +23,8 @@ class CopSimSpawnRobotNode(Node):
         self.spawn_robot()
 
         self.get_logger().info("CopSimSpawnRobotNode stopped")
-        self.destroy_node()
+        if self.client:
+            del self.client
 
     def connect_to_coppeliasim(self):
         self.client = RemoteAPIClient(

@@ -25,8 +25,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'cop_sim_spawn_robot = simulation.cop_sim_spawn_robot:main',
-            'robot_interface = simulation.robot_interface:main',
+            'cop_sim_spawn_robot = simulation.cop_sim_spawn_robot:main'
         ],
     },
 )
