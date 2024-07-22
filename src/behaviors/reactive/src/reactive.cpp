@@ -16,15 +16,15 @@ Reactive::Reactive() : Node("reactive")
     bool use_sim_param = this->declare_parameter<bool>("use_sim_param", true);
 
     this->_left_ultrasonic_sub = this->create_subscription<std_msgs::msg::Float32>(
-        "/sim/left_ultrasonic", 10, 
+        "/sim/ultrasonic/left", 10, 
         std::bind(&Reactive::left_ultrasonic_callback, this, std::placeholders::_1)
     );
     this->_right_ultrasonic_sub = this->create_subscription<std_msgs::msg::Float32>(
-        "/sim/right_ultrasonic", 10, 
+        "/sim/ultrasonic/right", 10, 
         std::bind(&Reactive::right_ultrasonic_callback, this, std::placeholders::_1)
     );
     this->_front_ultrasonic_sub = this->create_subscription<std_msgs::msg::Float32>(
-        "/sim/front_ultrasonic", 10, 
+        "/sim/ultrasonic/front", 10, 
         std::bind(&Reactive::front_ultrasonic_callback, this, std::placeholders::_1)
     );
 
