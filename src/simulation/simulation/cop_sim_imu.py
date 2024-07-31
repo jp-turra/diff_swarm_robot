@@ -33,7 +33,7 @@ class CopSimImuNode(Node):
         self.imu_pub = self.create_publisher(Imu, "/sim/imu", DEFAULT_QOS)
         self.imu_msg: Imu = Imu()
 
-        self.imu_msg.header.frame_id = "imu_link"
+        self.imu_msg.header.frame_id = "base_link"
 
         self.imu_timer = self.create_timer(
             0.01,
