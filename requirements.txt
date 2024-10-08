@@ -1,3 +1,2 @@
 coppeliasim-zmqremoteapi-client
 imageio
-scikit-learn
