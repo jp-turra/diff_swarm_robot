@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'pso_swarm = pso_swarm.pso_swarm:main'
+            'pso_swarm = pso_swarm.pso_swarm:main',
+            'robot = pso_swarm.robot:main'
         ],
     },
 )

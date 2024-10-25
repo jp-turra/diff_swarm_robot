@@ -37,7 +37,7 @@ class Robot(Node):
     gbest = np.array([0, 0])
 
     ultrasonics = [0, 0, 0]
-    target_pos = [1, 1]
+    target_pos = [1, 0]
 
     def __init__(self) -> None:
         super().__init__('pso_swarm')
@@ -57,7 +57,7 @@ class Robot(Node):
         self.verbose = self.get_parameter('verbose').get_parameter_value().bool_value
         self.speed_limit = self.get_parameter('speed_limit').get_parameter_value().double_value
 
-        self.timer = self.create_timer(1.0, self.run)
+        self.timer = self.create_timer(0.1, self.run)
 
     # ROS FUNCTIONS
     def setup_pub_subs(self):
@@ -86,7 +86,7 @@ class Robot(Node):
             Pose,
             f'{self.namespace}/pose',
             self.pose_callback,
-            2
+            10
         )
 
         self.cmd_vel_pub = self.create_publisher(
@@ -143,21 +143,16 @@ class Robot(Node):
         self.declare_parameter('speed_limit', 0.2)
 
     # TODO: Make a PID here
-    def calculate_publish_velocity(self):
-        target_position = self.X
-        
-        polar = self.euclidean_to_polar(velocity[0], velocity[1])
+    def calculate_publish_velocity(self, velocity: VelType) -> None:
+        # polar = self.euclidean_to_polar(velocity[0], velocity[1])
 
-        # Limit velocity between arbitrary limits
-        if np.abs(polar[0]) > self.speed_limit:
-            polar[0] = np.sign(polar[0])
-        if np.abs(polar[1]) > self.speed_limit:
-            polar[1] = np.sign(polar[1])
+        if np.linalg.norm(velocity) > self.speed_limit:
+            velocity = velocity / np.linalg.norm(velocity) * self.speed_limit
 
         cmd_vel = Twist()
 
-        cmd_vel.linear.x = polar[0]
-        cmd_vel.angular.z = polar[1]
+        cmd_vel.linear.x = float(velocity[0])
+        cmd_vel.angular.z = float(velocity[1])
 
         self.cmd_vel_pub.publish(cmd_vel)
 
@@ -270,8 +265,8 @@ class Robot(Node):
             # Select the best element of Personal-Bests it as G i
             global_cost = self.cost_function(self.gbest)
             if pbest_cost < global_cost:
-                if self.verbose:
-                    print(f"Global best improved. Cost: {self.cost_function(self.gbest):.2f} Pos: {self.gbest}")
+                # if self.verbose:
+                self.get_logger().info(f"Global best improved. Cost: {self.cost_function(self.gbest):.2f} Pos: {self.gbest}")
                 self.gbest = self.pbest
                 self.gbest_pub.publish(Vector3(x=self.gbest[0], y=self.gbest[1], z=0.0))
 
@@ -294,8 +289,8 @@ class Robot(Node):
         if self.ultrasonics[UltrasonicIndex.FRONT.value] < 0.5:
             return True
 
-    def update_movement(self, RV=(0, 0)) -> None:
-        next_pos = self.X + RV
+    def update_movement(self, RV=(0.0, 0.0)) -> None:
+        # next_pos = self.X + RV
 
         if self.check_for_collision():
 
@@ -313,13 +308,12 @@ class Robot(Node):
                 self.s *= -1
                 self.dc = 0.0
 
-            next_pos = self.X
+            RV = (0.0, 0.0) # --> next_pos = self.X
         else:
             # Decrease dc [6]
             self.dc *= self.p
 
-        self.X = next_pos
-        self.calculate_publish_velocity()
+        self.calculate_publish_velocity(RV) # --> self.X = next_pos
 
     def euclidean_distance(self, p1: PosType, p2: PosType) -> float:
         return np.sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
@@ -332,26 +326,34 @@ class Robot(Node):
     def cost_function(self, position: PosType) -> float:
         return self.euclidean_distance(self.target_pos, position)
 
+    def log(self, RV = [0, 0]):
+        self.get_logger().info(
+            f"Pos: {self.X} Vel: {self.V} | {RV} \n\tPbest: {self.pbest} Gbest: {self.gbest} \n\tCost: {self.cost_function(self.X):.2f}"
+        )
+
     def run(self):
-        while rclpy.ok():
-            if self.cost_function(self.X) < 1.0:
-                self.get_logger().info(f"Goal reached. Cost: {self.cost_function(self.X):.2f} Pos: {self.X}")
-                break
-            
-            RV = self.update_theta()
-            self.evaluate_position()
-            
-            n1 = 1 if self.cost_function(self.pbest) > self.FFthr else 0
-            n2 = 1 if self.cost_function(self.gbest) > self.FFthr else 0
+        if self.cost_function(self.X) < 0.5:
+            self.get_logger().info(f"Goal reached. Cost: {self.cost_function(self.X):.2f} Pos: {self.X}")
+            self.calculate_publish_velocity((0.0, 0.0))
+            self.timer.cancel()
+            self.destroy_node()
+            return
+        
+        RV = self.update_theta()
+        self.evaluate_position()
+        
+        n1 = 1 if self.cost_function(self.pbest) > self.FFthr else 0
+        n2 = 1 if self.cost_function(self.gbest) > self.FFthr else 0
 
-            if n1 == 0 and n2 == 0:
-                self.mem = []
-            else:
-                self.update_velocity(n1, n2)
-            
-            self.update_movement(RV)
+        if n1 == 0 and n2 == 0:
+            self.mem = []
+        else:
+            self.update_velocity(n1, n2)
 
+        self.log(RV)
 
+        self.update_movement(RV)
+        self.calculate_publish_velocity(self.V)
 
 def main():
     rclpy.init()

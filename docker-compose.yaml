@@ -1,18 +1,26 @@
+x-build:
+  &common-build
+  context: .
+  dockerfile: build/docker/DockerFile
+  args:
+    - tag=tcc
+
+x-config:
+  &common-config
+  image: tcc
+  stdin_open: true # interactive
+  tty: true
+  privileged: true
+
 services:
-  tcc:
+  windows:
     # Build Options
     build:
-      context: .
-      dockerfile: build/docker/DockerFile
-      args:
-        - tag=tcc
+      <<: *common-build
+    <<: *common-config
 
     # Run Options
-    container_name: tcc_container
-    image: tcc
-    stdin_open: true # interactive
-    tty: true
-    privileged: true
+    container_name: tcc_windows
     environment:
       - DISPLAY=:0
       - WAYLAND_DISPLAY=wayland-0
@@ -22,3 +30,42 @@ services:
       - /run/desktop/mnt/host/wslg/.X11-unix:/tmp/.X11-unix
       - /run/desktop/mnt/host/wslg:/mnt/wslg
       - .:/home/developer/project
+
+  linux:
+    # Build Options
+    build:
+      <<: *common-build
+    <<: *common-config
+
+    # Run Options
+    container_name: tcc_linux
+    environment:
+      - DISPLAY
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - .:/home/developer/project
+
+  linux-gpu:
+    # Build Options
+    build:
+      <<: *common-build
+    <<: *common-config
+
+    # Run Options
+    container_name: tcc_linux_gpu
+    runtime: nvidia
+    environment:
+      - DISPLAY
+      - NVIDIA_DRIVER_CAPABILITIES=all
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - .:/home/developer/project
+
+    # The following options represent '-gpus all' argument
+    deploy: 
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            count: 1
+            capabilities: [gpu]

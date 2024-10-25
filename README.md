@@ -18,6 +18,12 @@ To run docker container, run
 
 Access the container using VSCode Dev Container extension or the command `docker exec -it <container_id> bash` to access the container shell.
 
+### Extra linux setup
+
+* Run the following command to allow docker access X server
+    * `xhost +si:localuser:$USER`
+    * In the the last command don't work, run `xhost +si:localuser:root`
+
 ## Start CoppeliaSim inside the container
 
 ```bash
