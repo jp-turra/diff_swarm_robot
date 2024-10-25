@@ -30,9 +30,9 @@ class CopSimSpawnRobotNode(Node):
         self.client = RemoteAPIClient(
             host='localhost', 
             port=23000,
-            verbose=None,
+            verbose=2,
             # WARN: 'timeout' is a custom modification that is not published in the package
-            timeout=60 
+            # timeout=60 
         )
 
     def load_model(self, sim, filepath):

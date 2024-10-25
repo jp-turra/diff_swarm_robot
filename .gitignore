@@ -1,10 +1,5 @@
 # ROS compile folders
-build/*
-install/*
-log/*
-
-# VS Code settings
-.vscode/
+colcon/
 
 # Python
 env/*

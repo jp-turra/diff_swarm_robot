@@ -1,0 +1,9 @@
+"":
+  log-base: colcon/log
+  log-level: warning
+
+build:
+  base-paths:
+    - ./code/
+  build-base: colcon/build
+  install-base: colcon/install

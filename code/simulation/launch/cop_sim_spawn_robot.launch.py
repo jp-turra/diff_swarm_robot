@@ -16,7 +16,7 @@ def generate_launch_description():
     robot_description_path = os.path.join(
         project_name_path, 
         'models', 
-        'Simple1.ttm'
+        'Robot_TCC2.ttm'
     )
 
     robot_desc_param = DeclareLaunchArgument(

@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'simulation'
+package_name = 'pso_swarm'
 
 setup(
     name=package_name,
@@ -10,23 +10,17 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        # Models
-        ('share/' + package_name + '/models', ['models/Simple1.ttm']),
-        # Launchs
-        ('share/' + package_name + '/launch', ['launch/cop_sim_spawn_robot.launch.py'])
     ],
     install_requires=['setuptools'],
-    requires=['coppeliasim_zmqremoteapi_client'],
     zip_safe=True,
-    maintainer='user',
+    maintainer='Joao Turra',
     maintainer_email='joao.t06@hotmail.com',
     description='TODO: Package description',
     license='TODO: License declaration',
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'cop_sim_spawn_robot = simulation.cop_sim_spawn_robot:main',
-            'cop_sim_imu = simulation.cop_sim_imu:main',
+            'pso_swarm = pso_swarm.pso_swarm:main'
         ],
     },
 )
