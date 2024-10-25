@@ -7,4 +7,3 @@ build:
     - ./code/
   build-base: colcon/build
   install-base: colcon/install
-  cmake-clean-cache: True
