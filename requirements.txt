@@ -1,3 +1,4 @@
 coppeliasim-zmqremoteapi-client
 imageio
-scikit-learn
+numpy
+opencv-python

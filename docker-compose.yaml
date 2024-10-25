@@ -1,0 +1,24 @@
+services:
+  tcc:
+    # Build Options
+    build:
+      context: .
+      dockerfile: build/docker/DockerFile
+      args:
+        - tag=tcc
+
+    # Run Options
+    container_name: tcc_container
+    image: tcc
+    stdin_open: true # interactive
+    tty: true
+    privileged: true
+    environment:
+      - DISPLAY=:0
+      - WAYLAND_DISPLAY=wayland-0
+      - XDG_RUNTIME_DIR=/mnt/wslg/runtime-dir
+      - PULSE_SERVER=/mnt/wslg/PulseServer
+    volumes:
+      - /run/desktop/mnt/host/wslg/.X11-unix:/tmp/.X11-unix
+      - /run/desktop/mnt/host/wslg:/mnt/wslg
+      - .:/home/developer/project

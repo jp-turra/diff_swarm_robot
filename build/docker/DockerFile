@@ -1,0 +1,37 @@
+FROM osrf/ros:humble-desktop-full-jammy
+
+# Install missing packages
+RUN apt update && \
+    apt install -y wget sudo python3-pip x11-apps
+
+# Create developer user
+RUN useradd -m -s /bin/bash developer && usermod -aG sudo developer && echo "developer:developer" | chpasswd
+
+# Install CoppeliaSim
+WORKDIR /home/developer
+RUN wget https://downloads.coppeliarobotics.com/V4_7_0_rev4/CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04.tar.xz && \
+    tar -xf CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04.tar.xz && \
+    mv CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04 CoppeliaSim
+
+# Install project dependencies
+COPY . /tmp/proj
+USER developer
+WORKDIR /tmp/proj
+RUN rosdep update && \
+    rosdep install --from-paths code --ignore-src -r -y --rosdistro=humble && \
+    pip install -r requirements.txt && \
+    export PATH=$PATH:/home/developer/.local/bin
+
+# Clear Image
+USER root
+RUN rm -rf /tmp/proj && \
+    rm -rf /var/lib/apt/lists/* && \
+    rm /home/developer/CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04.tar.xz
+
+# Setup environment
+ENV COLCON_DEFAULTS_FILE="/home/developer/project/defaults.yaml"
+
+USER developer
+WORKDIR /home/developer
+RUN echo "source /opt/ros/humble/setup.bash" >> .bashrc
+CMD [ "bash" ]
