@@ -45,7 +45,7 @@ RUN rm -rf /tmp/proj && \
 
 # Setup environment
 ENV COLCON_DEFAULTS_FILE="/home/developer/project/defaults.yaml"
-RUN export echo "source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash" >> .bashrc
+RUN echo "source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash" >> .bashrc
 
 USER developer
 WORKDIR /home/developer
