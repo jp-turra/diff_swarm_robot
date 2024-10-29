@@ -1,0 +1,4 @@
+[submodule "code/ros2-swarm"]
+	path = code/ros2-swarm
+	url = https://github.com/ROS2swarm/ROS2swarm.git
+	branch = humble-dev

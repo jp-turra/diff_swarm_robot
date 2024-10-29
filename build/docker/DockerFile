@@ -1,11 +1,12 @@
 FROM osrf/ros:humble-desktop-full-jammy
 
-# Install missing packages
+# Install util packages
 RUN apt update && \
-    apt install -y wget sudo python3-pip x11-apps mesa-utils
+    apt install -y wget sudo python3-pip x11-apps nano mesa-utils
 
 # Create developer user
 RUN useradd -m -s /bin/bash developer && usermod -aG sudo developer && echo "developer:developer" | chpasswd
+ENV HOME=/home/developer
 
 # Install CoppeliaSim
 WORKDIR /home/developer
@@ -13,9 +14,23 @@ RUN wget https://downloads.coppeliarobotics.com/V4_7_0_rev4/CoppeliaSim_Edu_V4_7
     tar -xf CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04.tar.xz && \
     mv CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04 CoppeliaSim
 
-# Install project dependencies
-COPY . /tmp/proj
+# Install ros2-swarm deps
+RUN pip install -U argcomplete && apt install -y --no-install-recommends python3-colcon-common-extensions ros-humble-gazebo-ros-pkgs \
+    ros-humble-cartographer ros-humble-cartographer-ros ros-humble-navigation2 ros-humble-nav2-bringup \ 
+    ros-humble-dynamixel-sdk ros-humble-turtlebot3 ros-humble-turtlebot3-msgs ros-humble-turtlebot3-simulations
+
+# Clever remove this
 USER developer
+RUN mkdir -p ${HOME}/turtlebot3_ws/src
+WORKDIR ${HOME}/turtlebot3_ws/src
+RUN . /opt/ros/humble/setup.sh && \
+    git clone -b humble-devel https://github.com/ROBOTIS-GIT/turtlebot3_simulations.git && \
+    echo 'export ROS_DOMAIN_ID=30 #TURTLEBOT3' >> ~/.bashrc && \
+    echo 'export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:${HOME}/turtlebot3_ws/src/turtlebot3_simulations/turtlebot3_gazebo/models' >> ~/.bashrc
+
+# Install project dependencies
+USER developer
+COPY . /tmp/proj
 WORKDIR /tmp/proj
 RUN rosdep update && \
     rosdep install --from-paths code --ignore-src -r -y --rosdistro=humble && \
@@ -30,6 +45,7 @@ RUN rm -rf /tmp/proj && \
 
 # Setup environment
 ENV COLCON_DEFAULTS_FILE="/home/developer/project/defaults.yaml"
+RUN export echo "source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash" >> .bashrc
 
 USER developer
 WORKDIR /home/developer

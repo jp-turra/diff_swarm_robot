@@ -1,3 +1,18 @@
 {
-    "cmake.ignoreCMakeListsMissing": true
+    "cmake.ignoreCMakeListsMissing": true,
+    "python.analysis.exclude": [
+        "colcon/build/**",
+        "colcon/log/**",
+        "build/**",
+        "docs/**",
+        "tools/**",
+        "code/**",
+    ],
+    "python.analysis.include": [
+        "colcon/install/**",
+    ],
+    "python.analysis.extraPaths": [
+        "./colcon/install/ros2swarm/lib/python3.10/site-packages",
+        "./colcon/install/communication_interfaces/local/lib/python3.10/dist-packages"
+    ],
 }
