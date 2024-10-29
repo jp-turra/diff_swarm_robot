@@ -1,0 +1,15 @@
+/**/hardware_protection_layer:
+  ros__parameters:
+    hardware_protection_layer_max_range: 0.45
+    hardware_protection_layer_min_range: 0.3
+    hardware_protection_layer_front_attraction: 2.0
+    hardware_protection_layer_threshol: 2
+    max_translational_velocity: 0.3 # m/s
+    max_rotational_velocity: 0.942 # pi * 0.3
+
+/**/pso_adaptative:
+  ros__parameters:
+    pso_w: 0.9
+    pso_c1: 0.5
+    pso_c2: 0.3
+    

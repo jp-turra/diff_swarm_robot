@@ -11,7 +11,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
     ],
-    install_requires=['setuptools', 'functools'],
+    install_requires=['setuptools', 'functools', 'numpy'],
     zip_safe=True,
     maintainer='developer',
     maintainer_email='joao.t06@hotmail.com',
@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'hardware_protection_layer_us = pso_adaptative.hardware_protection_layer_us:main'
+            'hardware_protection_layer_us = pso_adaptative.hardware_protection_layer_us:main',
+            'pso_adaptative = pso_adaptative.pso_adaptative:main'
         ],
     },
 )
