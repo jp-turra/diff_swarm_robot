@@ -12,6 +12,19 @@ x-config:
   tty: true
   privileged: true
 
+x-gpu:
+  &x-gpu
+  environment:
+    - NVIDIA_DRIVER_CAPABILITIES=all
+  # The following options represent '-gpus all' argument
+  deploy: 
+    resources:
+      reservations:
+        devices:
+        - driver: nvidia
+          count: 1
+          capabilities: [gpu]
+
 services:
   windows:
     # Build Options
@@ -45,27 +58,3 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - .:/home/developer/project
 
-  linux-gpu:
-    # Build Options
-    build:
-      <<: *common-build
-    <<: *common-config
-
-    # Run Options
-    container_name: tcc_linux_gpu
-    runtime: nvidia
-    environment:
-      - DISPLAY
-      - NVIDIA_DRIVER_CAPABILITIES=all
-    volumes:
-      - /tmp/.X11-unix:/tmp/.X11-unix
-      - .:/home/developer/project
-
-    # The following options represent '-gpus all' argument
-    deploy: 
-      resources:
-        reservations:
-          devices:
-          - driver: nvidia
-            count: 1
-            capabilities: [gpu]

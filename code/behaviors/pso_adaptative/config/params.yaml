@@ -1,10 +1,10 @@
 /*: # All namespaces are allowed
   hardware_protection_layer:
     ros__parameters:
-      hardware_protection_layer_max_range: 0.45
-      hardware_protection_layer_min_range: 0.3
-      hardware_protection_layer_front_attraction: 2.0
-      hardware_protection_layer_threshol: 2
-      max_translational_velocity: 0.25 # m/s
-      max_rotational_velocity: 0.3 # pi * 0.3
+      hardware_protection_layer_max_range: 0.3
+      hardware_protection_layer_min_range: 0.2
+      hardware_protection_layer_front_attraction: 0.05
+      hardware_protection_layer_threshol: 1
+      max_translational_velocity: 0.05 # m/s
+      max_rotational_velocity: 0.05 # rad/s
     

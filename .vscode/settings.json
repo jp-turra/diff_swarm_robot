@@ -1,5 +1,5 @@
 {
-    "workbench.colorTheme": "Monokai Pro (Filter Spectrum)",
+    "workbench.colorTheme": "Monokai Classic",
     "cmake.ignoreCMakeListsMissing": true,
     "python.analysis.exclude": [
         "colcon/build/**",

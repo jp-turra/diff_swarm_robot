@@ -1,6 +1,5 @@
 {
     "recommendations": [
-        "monokai.theme-monokai-pro-vscode", 
         "Codeium.codeium", 
         "ms-python.python", "ms-python.vscode-pylance", "ms-python.black-formatter",
         "ms-vscode.cpptools", "twxs.cmake", "ms-vscode.cmake-tools",
