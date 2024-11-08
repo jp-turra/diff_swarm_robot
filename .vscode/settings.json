@@ -1,5 +1,6 @@
 {
-    "workbench.colorTheme": "Monokai Classic",
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "workbench.colorTheme": "Default Dark+",
     "cmake.ignoreCMakeListsMissing": true,
     "python.analysis.exclude": [
         "colcon/build/**",
@@ -16,7 +17,12 @@
         "./colcon/install/ros2swarm/lib/python3.10/site-packages",
         "./colcon/install/communication_interfaces/local/lib/python3.10/dist-packages"
     ],
+    "ruff.enable": true,
+    "ruff.fixAll": true,
+    "ruff.exclude": ["build/", "colcon/", "docs/"],
+    "ruff.lint.enable": true,
+    "ruff.lint.run": "onSave",
     "[python]": {
-        "editor.formatOnSave": true
+        "editor.formatOnSave": true,
     }
 }

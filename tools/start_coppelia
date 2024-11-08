@@ -1,0 +1,16 @@
+#!/bin/bash
+
+coppelia_dir=$HOME/CoppeliaSim
+
+if [[ "$1" != "" ]]; then
+    coppelia_dir=$1
+fi
+
+if [[ "$coppelia_dir" == "" ]]; then
+    echo "Please set a valid path to CoppeliaSim."
+    echo "Usage: $0 <path_to_coppelia>"
+    exit 1
+fi
+
+cd $coppelia_dir
+./coppeliaSim

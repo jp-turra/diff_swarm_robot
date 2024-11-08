@@ -1,6 +1,5 @@
 "":
   log-base: colcon/log
-  log-level: warning
 
 build:
   base-paths:
