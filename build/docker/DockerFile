@@ -1,4 +1,7 @@
-FROM osrf/ros:humble-desktop-full-jammy
+FROM osrf/ros:humble-desktop-full-jammy as base
+
+ADD https://github.com/ROBOTIS-GIT/turtlebot3_simulations.git#humble-devel /tmp/turtlebot3_simulations
+ADD https://downloads.coppeliarobotics.com/V4_7_0_rev4/CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04.tar.xz /tmp
 
 # Install util packages
 RUN apt update && \
@@ -9,9 +12,8 @@ RUN useradd -m -s /bin/bash developer && usermod -aG sudo developer && echo "dev
 ENV HOME=/home/developer
 
 # Install CoppeliaSim
-WORKDIR /home/developer
-RUN wget https://downloads.coppeliarobotics.com/V4_7_0_rev4/CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04.tar.xz && \
-    tar -xf CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04.tar.xz && \
+WORKDIR /tmp
+RUN tar -xf CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04.tar.xz && \
     mv CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04 CoppeliaSim
 
 # Install ros2-swarm deps
@@ -19,12 +21,14 @@ RUN pip install -U argcomplete && apt install -y --no-install-recommends python3
     ros-humble-cartographer ros-humble-cartographer-ros ros-humble-navigation2 ros-humble-nav2-bringup \ 
     ros-humble-dynamixel-sdk ros-humble-turtlebot3 ros-humble-turtlebot3-msgs ros-humble-turtlebot3-simulations
 
-# Clever remove this
+FROM base as stage1
+
+COPY --from=base /tmp/turtlebot3_simulations ${HOME}/turtlebot3_ws/src/turtlebot3_simulations
+COPY --from=base /tmp/CoppeliaSim ${HOME}/CoppeliaSim
+
 USER developer
-RUN mkdir -p ${HOME}/turtlebot3_ws/src
 WORKDIR ${HOME}/turtlebot3_ws/src
 RUN . /opt/ros/humble/setup.sh && \
-    git clone -b humble-devel https://github.com/ROBOTIS-GIT/turtlebot3_simulations.git && \
     echo 'export ROS_DOMAIN_ID=30 #TURTLEBOT3' >> ~/.bashrc && \
     echo 'export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:${HOME}/turtlebot3_ws/src/turtlebot3_simulations/turtlebot3_gazebo/models' >> ~/.bashrc
 
@@ -35,19 +39,23 @@ WORKDIR /tmp/proj
 RUN rosdep update && \
     rosdep install --from-paths code --ignore-src -r -y --rosdistro=humble && \
     pip install -r requirements.txt && \
-    export PATH=$PATH:/home/developer/.local/bin
+    export PATH=$PATH:${HOME}/.local/bin
 
 # Clear Image
 USER root
 RUN rm -rf /tmp/proj && \
-    rm -rf /var/lib/apt/lists/* && \
-    rm /home/developer/CoppeliaSim_Edu_V4_7_0_rev4_Ubuntu22_04.tar.xz
+    rm -rf /var/lib/apt/lists/*
+
+FROM stage1 as final
+
+COPY --from=stage1 /tmp/turtlebot3_simulations ${HOME}/turtlebot3_ws/src/turtlebot3_simulations
+COPY --from=stage1 /tmp/CoppeliaSim ${HOME}/CoppeliaSim
 
 # Setup environment
-ENV COLCON_DEFAULTS_FILE="/home/developer/project/defaults.yaml"
+ENV COLCON_DEFAULTS_FILE="${HOME}/project/defaults.yaml"
 RUN echo "source /usr/share/colcon_argcomplete/hook/colcon-argcomplete.bash" >> .bashrc
 
 USER developer
-WORKDIR /home/developer
+WORKDIR ${HOME}
 RUN echo "source /opt/ros/humble/setup.bash" >> .bashrc
 CMD [ "bash" ]

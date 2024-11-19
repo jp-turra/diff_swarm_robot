@@ -1,6 +1,5 @@
 {
     "editor.defaultFormatter": "charliermarsh.ruff",
-    "workbench.colorTheme": "Default Dark+",
     "cmake.ignoreCMakeListsMissing": true,
     "python.analysis.exclude": [
         "colcon/build/**",

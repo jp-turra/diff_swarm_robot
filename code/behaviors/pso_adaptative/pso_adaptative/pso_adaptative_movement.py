@@ -2,8 +2,8 @@ import rclpy
 import numpy as np
 
 from rclpy.qos import qos_profile_sensor_data, QoSProfile, QoSHistoryPolicy
-from geometry_msgs.msg import Twist, Pose, Vector3
-from std_msgs.msg import Bool
+from geometry_msgs.msg import Twist, Pose, Vector3, Vector3Stamped
+from std_msgs.msg import Bool, Header
 
 from ros2swarm.movement_pattern.movement_pattern import MovementPattern
 
@@ -16,9 +16,10 @@ class PSOAdaptative(MovementPattern):
         self.declare_parameters(
             namespace="",
             parameters=[
-                ("pso_w", 1),  # Velocity smoother
+                ("pso_w", 1.0),  # Velocity smoother
                 ("pso_c1", 0.5),
                 ("pso_c2", 0.3),
+                ("target", [1.0, 1.0]),
             ],
         )
 
@@ -32,7 +33,9 @@ class PSOAdaptative(MovementPattern):
             self.get_parameter("pso_c2").get_parameter_value().double_value
         )
 
-        self.target = np.array([1, 1])
+        self.target = np.array(
+            self.get_parameter("target").get_parameter_value().double_array_value
+        )
 
         self.X = np.array([0, 0])
         self.V = np.random.rand(2) * 2
@@ -44,12 +47,12 @@ class PSOAdaptative(MovementPattern):
 
         gbest_qos = QoSProfile(
             history=QoSHistoryPolicy.KEEP_LAST,
-            depth=1,
+            depth=2,
             avoid_ros_namespace_conventions=True,
         )
-        self.gbest_pub = self.create_publisher(Vector3, "/gbest", gbest_qos)
+        self.gbest_pub = self.create_publisher(Vector3Stamped, "/gbest", 2)
         self.gbest_sub = self.create_subscription(
-            Vector3,
+            Vector3Stamped,
             "/gbest",
             self.swarm_command_controlled(self.gbest_callback),
             gbest_qos,
@@ -77,8 +80,9 @@ class PSOAdaptative(MovementPattern):
     def has_obstacle_callback(self, msg: Bool):
         self.has_obstacle = msg.data
 
-    def gbest_callback(self, msg: Vector3):
-        self.gbest = np.array([msg.x, msg.y])
+    def gbest_callback(self, msg: Vector3Stamped):
+        if msg.header.frame_id != self.get_namespace():
+            self.gbest = np.array([msg.vector.x, msg.vector.y])
 
     def pose_callback(self, msg: Pose):
         self.X = np.array([msg.position.x, msg.position.y])
@@ -92,11 +96,24 @@ class PSOAdaptative(MovementPattern):
         local_cost = self.distance_to_target(self.X)
 
         if local_cost < pbest_cost:
+            self.get_logger().info(
+                f"PBest improved. Cost: {self.distance_to_target(self.pbest):.2f} Pos: {self.pbest}"
+            )
             self.pbest = self.X
 
         if pbest_cost < gbest_cost:
             self.gbest = self.pbest
-            self.gbest_pub.publish(Vector3(x=self.gbest[0], y=self.gbest[1], z=0.0))
+            self.get_logger().info(
+                f"GBest improved. Cost: {self.distance_to_target(self.gbest):.2f} Pos: {self.gbest}"
+            )
+            msg = Vector3Stamped(
+                header=Header(
+                    frame_id=self.get_namespace(),
+                    stamp=self.get_clock().now().to_msg(),
+                ),
+                vector=Vector3(x=self.gbest[0], y=self.gbest[1], z=0.0),
+            )
+            self.gbest_pub.publish(msg)
 
     def pso_update_veloticy(self):
         r1, r2 = np.random.rand(2)
@@ -107,16 +124,8 @@ class PSOAdaptative(MovementPattern):
             + r2 * self.pso_c2 * (self.gbest - self.X)
         )
 
-        if self.V[0] <= 0.0:
-            self.V[0] = 0.0
-        elif self.V[0] < 0.05:
-            self.V[0] = 0.05
-
-        if self.V[1] > 0.0 and self.V[1] < 0.05:
-            self.V[1] = 0.05
-
     def pso_interation(self):
-        self.get_logger().info(f"V: {self.V}")
+        self.get_logger().debug(f"V: {self.V}")
         self.pso_update_veloticy()
         self.pso_evalute_bests()
 
@@ -127,7 +136,7 @@ class PSOAdaptative(MovementPattern):
             )
         )
 
-        if self.distance_to_target(self.X) < 0.2:
+        if self.distance_to_target(self.X) < 0.25:
             self.get_logger().info(
                 f"Target reached. Cost: {self.distance_to_target(self.gbest):.2f} Pos: {self.gbest}"
             )

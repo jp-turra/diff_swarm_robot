@@ -2,28 +2,13 @@ x-build:
   &common-build
   context: .
   dockerfile: build/docker/DockerFile
-  args:
-    - tag=tcc
 
 x-config:
   &common-config
-  image: tcc
+  image: tcc:latest
   stdin_open: true # interactive
   tty: true
   privileged: true
-
-x-gpu:
-  &x-gpu
-  environment:
-    - NVIDIA_DRIVER_CAPABILITIES=all
-  # The following options represent '-gpus all' argument
-  deploy: 
-    resources:
-      reservations:
-        devices:
-        - driver: nvidia
-          count: 1
-          capabilities: [gpu]
 
 services:
   windows:

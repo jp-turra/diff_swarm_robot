@@ -52,8 +52,8 @@ class HardwareProtectionLayerUS(HardwareProtectionLayer):
             Bool, self.get_namespace() + "/has_obstacle", qos_profile_sensor_data
         )
 
-        self.current_ranges = [0.0, 0.0, 0.0]
-        self.us_angles = [0.0, 1.5708, 3.14159]
+        self.us_ranges = [0.0, 0.0, 0.0]
+        # self.us_angles = [0.0, 1.5708, 3.14159]
         self.rotate_init_time = None
         self.rotate_left = True
 
@@ -67,7 +67,7 @@ class HardwareProtectionLayerUS(HardwareProtectionLayer):
 
     # HPL functions
     def ultrasonic_to_range(self, msg: Float32, index: int):
-        self.current_ranges[index] = msg.data
+        self.us_ranges[index] = msg.data
 
     def vector_calc(self):
         if self.current_ranges is None:
@@ -116,64 +116,70 @@ class HardwareProtectionLayerUS(HardwareProtectionLayer):
 
     def wait_and_rotate(self):
         command = Twist()
-        turn_time = np.random.rand() * 3 + 2
+        wait_time = 0.5
+        turn_time = np.random.rand() * 5 + wait_time
         if time.time() - self.rotate_init_time > turn_time:
             self.rotate_init_time = None
-        elif time.time() - self.rotate_init_time > 2:
+        elif time.time() - self.rotate_init_time > wait_time:
             rotation_sign = 1 if self.rotate_left else -1
             command.angular.z = self.param_max_rotational_velocity * rotation_sign
 
         return command
 
-    def is_obstacle_free(max_range, ranges, threshold):
+    def is_obstacle_free(self, max_range, ranges, threshold):
         """Return true if no obstacle is detected within the max_range, false otherwise."""
         total = 0
         if 0 < ranges[FRONT] < max_range:
             total += 1
-        elif 0 < ranges[LEFT] < max_range / 2:
+        elif 0 < ranges[LEFT] < (max_range / 2):
             total += 1
-        elif 0 < ranges[RIGHT] < max_range / 2:
+        elif 0 < ranges[RIGHT] < (max_range / 2):
             total += 1
 
         return total <= threshold
+
+    def fit_command(self, command: Twist):
+        abs_x = abs(command.linear.x)
+        sign_x = np.sign(command.linear.x)
+
+        abs_z = abs(command.angular.z)
+        sign_z = np.sign(command.angular.z)
+
+        if abs_x > self.param_max_translational_velocity:
+            command.linear.x = sign_x * self.param_max_translational_velocity
+        elif abs_x < 0.02:
+            command.linear.x = sign_x * 0.02
+        if abs_z > self.param_max_rotational_velocity:
+            command.angular.z = sign_z * self.param_max_rotational_velocity
+        elif abs_z < 0.02:
+            command.angular.z = sign_z * 0.02
+
+        return command
 
     def update(self):
         avoid_distance = self.param_max_range
         command = self.requested_drive_command
 
-        ranges = ScanCalculationFunctions.adjust_ranges(
-            self.current_ranges, self.param_min_range, avoid_distance
-        )
-        obstacle_free = ScanCalculationFunctions.is_obstacle_free(
-            avoid_distance, ranges, self.param_threshold
-        )
+        command = self.fit_command(command)
 
-        if not obstacle_free:
-            self.get_logger().debug("Obstacle detected")
+        obstacle_free = self.is_obstacle_free(
+            avoid_distance, self.us_ranges, self.param_threshold
+        )
 
         self.has_obstacle_pub.publish(Bool(data=(not obstacle_free)))
 
         if not obstacle_free and self.rotate_init_time is None:
             # Add a behavior that stops the robot, wait random x seconds and rotates randomly and start again
+            self.get_logger().info("Obstacle detected!")
             self.rotate_init_time = time.time()
             self.rotate_left = (
-                self.current_ranges[LEFT] > self.current_ranges[RIGHT]
-                or self.current_ranges[LEFT] == 0
-            )
+                self.us_ranges[LEFT] > self.us_ranges[RIGHT]
+                and self.us_ranges[RIGHT] != 0
+            ) or self.us_ranges[LEFT] == 0
 
             command = Twist()
         elif self.rotate_init_time is not None:
             command = self.wait_and_rotate()
-
-        # if np.abs(command.linear.x) > self.param_max_translational_velocity:
-        #     command.linear.x = (
-        #         np.sign(command.linear.x) * self.param_max_translational_velocity
-        #     )
-
-        # if np.abs(command.angular.z) > self.param_max_rotational_velocity:
-        #     command.angular.z = (
-        #         np.sign(command.angular.z) * self.param_max_rotational_velocity
-        #     )
 
         self.publisher_cmd_vel.publish(command)
 

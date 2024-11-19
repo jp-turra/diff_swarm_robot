@@ -1,4 +1,4 @@
-coppeliasim-zmqremoteapi-client==2.04
+coppeliasim-zmqremoteapi-client==2.0.4
 imageio==2.36.0
 numpy==1.21.5
 opencv-python==4.10.0.84
