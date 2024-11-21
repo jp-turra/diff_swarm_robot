@@ -1,0 +1,119 @@
+{
+    "folders": [
+        {
+            "path": "../../"
+        }
+    ],
+    "settings": {
+        "workbench.colorTheme": "Default Dark+",
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "cmake.ignoreCMakeListsMissing": true,
+        "python.analysis.exclude": [
+            "colcon/build/**",
+            "colcon/log/**",
+            "build/**",
+            "docs/**",
+            "tools/**",
+            "code/**",
+        ],
+        "python.analysis.include": [
+            "colcon/install/**",
+        ],
+        "python.analysis.extraPaths": [
+            "./colcon/install/ros2swarm/lib/python3.10/site-packages",
+            "./colcon/install/communication_interfaces/local/lib/python3.10/dist-packages"
+        ],
+        "ruff.enable": true,
+        "ruff.fixAll": true,
+        "ruff.exclude": ["build/", "colcon/", "docs/"],
+        "ruff.lint.enable": true,
+        "ruff.lint.run": "onSave",
+        "[python]": {
+            "editor.formatOnSave": true,
+        }
+    },
+    "extensions": {
+        "recommendations": [
+            "Codeium.codeium", 
+            "ms-python.python", "ms-python.vscode-pylance", "charliermarsh.ruff",
+            "ms-vscode.cpptools", "twxs.cmake", "ms-vscode.cmake-tools",
+            "ms-azuretools.vscode-docker"
+        ]
+    },
+    "tasks": {
+        "version": "2.0.0",
+        "tasks": [
+            {
+                "label": "Build Workspace",
+                "command": "colcon build",
+                "type": "shell",
+                "args": [],
+                "presentation": {
+                    "clear": true,
+                    "reveal": "always"
+                },
+                "group": "build",
+                "problemMatcher": [
+                    "$gcc", "$python"
+                ]
+            },
+            {
+                "label": "Launch CoppeliaSim",
+                "command": "cd ~/CoppeliaSim && ./coppeliaSim",
+                "type": "shell",
+                "args": [],
+                "problemMatcher": [
+                    "$tsc"
+                ],
+                "presentation": {
+                    "clear": true,
+                    "group": "coppelia",
+                    "reveal": "always"
+                },
+                "group": "none"
+            },
+            {
+                "label": "Launch Robot",
+                "command": "source ${workspaceFolder}/colcon/install/setup.bash && ros2 launch simulation cop_sim_spawn_robot.launch.py",
+                "type": "shell",
+                "args": [],
+                "presentation": {
+                    "clear": true,
+                    "reveal": "always"
+                },
+                "group": "none",
+                "problemMatcher": [
+                    "$gcc", "$python"
+                ]
+            },
+            {
+                "label": "Start Swarm",
+                "command": "source ${workspaceFolder}/colcon/install/setup.bash && ros2 topic pub /swarm_command communication_interfaces/msg/Int8Message \"{data: 1}\" --once",
+                "type": "shell",
+                "args": [],
+                "presentation": {
+                    "clear": true,
+                    "reveal": "always"
+                },
+                "group": "none",
+                "problemMatcher": [
+                    "$gcc", "$python"
+                ]
+            },
+            {
+                "label": "Stop Swarm",
+                "command": "source ${workspaceFolder}/colcon/install/setup.bash && ros2 topic pub /swarm_command communication_interfaces/msg/Int8Message \"{data: 0}\" --once",
+                "type": "shell",
+                "args": [],
+                "presentation": {
+                    "clear": true,
+                    "reveal": "always"
+                },
+                "group": "none",
+                "problemMatcher": [
+                    "$gcc", "$python"
+                ]
+            }
+        ]
+    }
+}

@@ -5,13 +5,13 @@
       hardware_protection_layer_min_range: 0.1
       hardware_protection_layer_front_attraction: 0.05
       hardware_protection_layer_threshol: 1
-      max_translational_velocity: 0.1 # m/s
-      max_rotational_velocity: 0.2 # rad/s
+      max_translational_velocity: 0.5 # m/s
+      max_rotational_velocity: 0.5 # rad/s
       
   pso_adaptative_movement:
     ros__parameters:
       pso_w: 0.5
-      pso_c1: 0.6
-      pso_c2: 0.4
-      target: [0.900, 0.925]
+      pso_c1: 0.5
+      pso_c2: 0.55
+      target: [0.0, 0.0]
     

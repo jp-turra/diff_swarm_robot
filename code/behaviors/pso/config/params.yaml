@@ -1,0 +1,8 @@
+/*:
+  pso:
+    ros__parameters:
+      pso_w: 1.0
+      pso_c1: 0.4
+      pso_c2: 0.5
+      target: [1.4, 0.0]
+    

@@ -147,12 +147,13 @@ class HardwareProtectionLayerUS(HardwareProtectionLayer):
 
         if abs_x > self.param_max_translational_velocity:
             command.linear.x = sign_x * self.param_max_translational_velocity
-        elif abs_x < 0.02:
-            command.linear.x = sign_x * 0.02
+        elif abs_x < 0.005:
+            command.linear.x = sign_x * 0.005
+
         if abs_z > self.param_max_rotational_velocity:
             command.angular.z = sign_z * self.param_max_rotational_velocity
-        elif abs_z < 0.02:
-            command.angular.z = sign_z * 0.02
+        elif abs_z < 0.005:
+            command.angular.z = sign_z * 0.005
 
         return command
 
@@ -168,18 +169,18 @@ class HardwareProtectionLayerUS(HardwareProtectionLayer):
 
         self.has_obstacle_pub.publish(Bool(data=(not obstacle_free)))
 
-        if not obstacle_free and self.rotate_init_time is None:
-            # Add a behavior that stops the robot, wait random x seconds and rotates randomly and start again
-            self.get_logger().info("Obstacle detected!")
-            self.rotate_init_time = time.time()
-            self.rotate_left = (
-                self.us_ranges[LEFT] > self.us_ranges[RIGHT]
-                and self.us_ranges[RIGHT] != 0
-            ) or self.us_ranges[LEFT] == 0
+        # if not obstacle_free and self.rotate_init_time is None:
+        #     # Add a behavior that stops the robot, wait random x seconds and rotates randomly and start again
+        #     self.get_logger().info("Obstacle detected!")
+        #     self.rotate_init_time = time.time()
+        #     self.rotate_left = (
+        #         self.us_ranges[LEFT] > self.us_ranges[RIGHT]
+        #         and self.us_ranges[RIGHT] != 0
+        #     ) or self.us_ranges[LEFT] == 0
 
-            command = Twist()
-        elif self.rotate_init_time is not None:
-            command = self.wait_and_rotate()
+        #     command = Twist()
+        # elif self.rotate_init_time is not None:
+        #     command = self.wait_and_rotate()
 
         self.publisher_cmd_vel.publish(command)
 
