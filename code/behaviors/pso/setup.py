@@ -23,6 +23,7 @@ setup(
     entry_points={
         "console_scripts": [
             "pso = pso.pso:main",
+            "copilot = pso.copilot:main",
         ],
     },
 )

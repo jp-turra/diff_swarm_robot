@@ -5,4 +5,9 @@
       pso_c1: 0.4
       pso_c2: 0.5
       target: [1.4, 0.0]
+  pso_algorithm:
+    ros__parameters:
+      c1: 1.5
+      c2: 1.5
+      w: 0.2
     
