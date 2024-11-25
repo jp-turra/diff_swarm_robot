@@ -8,6 +8,7 @@
   pso_algorithm:
     ros__parameters:
       c1: 1.5
-      c2: 1.5
-      w: 0.2
+      c2: 0.5
+      w: 1.0
+      max_speed: 0.3
     

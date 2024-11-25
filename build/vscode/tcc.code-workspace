@@ -5,7 +5,7 @@
         }
     ],
     "settings": {
-        "workbench.colorTheme": "Default Dark+",
+        "workbench.colorTheme": "Red",
         "editor.defaultFormatter": "charliermarsh.ruff",
         "cmake.ignoreCMakeListsMissing": true,
         "python.analysis.exclude": [
