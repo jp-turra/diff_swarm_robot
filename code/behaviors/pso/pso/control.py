@@ -4,10 +4,24 @@ import numpy as np
 import math
 
 from rclpy.node import Node
+from std_msgs.msg import Bool
 from geometry_msgs.msg import Twist, Pose, PoseStamped, Quaternion
 from sensor_msgs.msg import Range
 
 np.set_printoptions(precision=2)
+
+
+class LoggerCSV:
+    def __init__(self, name):
+        self.name = name
+        with open(self.name, "w") as f:
+            f.write("yaw,pose_x,pose_y,target_x,target_y,kP,kI,kD,e,e_P,e_I,e_D,w,v\n")
+
+    def log_pid(self, yaw, pose, target, kP, kI, kD, e, e_P, e_I, e_D, w, v):
+        with open(self.name, "a") as f:
+            f.write(
+                f"{yaw:.2f},{pose[0]:.2f},{pose[1]:.2f},{target[0]:.2f},{target[1]:.2f},{kP:.2f},{kI:.2f},{kD:.2f},{e:.2f},{e_P:.2f},{e_I:.2f},{e_D:.2f},{w:.2f},{v:.2f}\n"
+            )
 
 
 class Controller:
@@ -28,9 +42,19 @@ class Controller:
 
         self.desiredV = v
         self.dt = dT  # in second
-        return
+        self.csv = LoggerCSV("log.csv")
 
-    def iteratePID(self, current, goal, orientation, logger):
+    def setPID(self, kP, kI, kD, dT=None, v=None):
+        self.Kp = kP
+        self.Ki = kI
+        self.Kd = kD
+        if dT is not None:
+            self.dt = dT
+
+        if v is not None:
+            self.desiredV = v
+
+    def iteratePID(self, current, goal, orientation):
         # Difference in x and y
         d_x = goal[0] - current[0]
         d_y = goal[1] - current[1]
@@ -49,8 +73,7 @@ class Controller:
         yaw = math.atan2(siny_cosp, cosy_cosp)
         alpha = g_theta - yaw
 
-        # alpha = g_theta - np.pi / 2
-        e = np.arctan2(np.sin(alpha), np.cos(alpha))
+        e = math.atan2(math.cos(alpha), math.sin(alpha))
 
         e_P = e
         e_I = self.E + e
@@ -65,14 +88,16 @@ class Controller:
         # velocity with constant speed of v
         w = self.Kp * e_P + self.Ki * e_I + self.Kd * e_D
 
-        w = np.arctan2(np.sin(w), np.cos(w))
+        w = -np.arctan2(np.sin(w), np.cos(w))
 
         self.E = self.E + e
         self.old_e = e
-        v = self.desiredV
+        v = self.desiredV * np.cos(abs(e))
+        if v < 0.01:
+            v = 0.01
 
-        logger.info(
-            f"alpha: {alpha:.2f} | e_P: {e_P:.2f} | e_I: {e_I:.2f} | e_D: {e_D:.2f} | w: {w:.2f} | v: {v:.2f}"
+        self.csv.log_pid(
+            yaw, current, goal, self.Kp, self.Ki, self.Kd, e, e_P, e_I, e_D, w, v
         )
 
         return v, w
@@ -81,22 +106,63 @@ class Controller:
 class PSOAlgorithm(Node):
     def __init__(self):
         super().__init__("pso_algorithm")
+        self.dt = 0.05
 
-        # Parâmetros do PSO
-        self.declare_parameter("c1", 1.5)
-        self.declare_parameter("c2", 1.5)
-        self.declare_parameter("w", 0.5)
-        self.declare_parameter("max_speed", 0.5)
-
-        self.c1 = self.get_parameter("c1").get_parameter_value().double_value
-        self.c2 = self.get_parameter("c2").get_parameter_value().double_value
-        self.w = self.get_parameter("w").get_parameter_value().double_value
-        self.max_speed = (
-            self.get_parameter("max_speed").get_parameter_value().double_value
-        )
+        self.setup_parameters()
 
         self.namespace = self.get_namespace()
 
+        self.setup_pub_sub()
+
+        # Variáveis de controle
+        self.orientation = Quaternion()
+        self.cmd = Twist()
+        self.pbest = np.random.rand(2) * 2
+        self.gbest = np.random.rand(2) * 2
+        self.current_position = np.zeros(2)
+        self.velocity = np.zeros(2)  # TODO: Check to be random
+
+        self.map_offset = 5
+        self.termination_distance = 0.1
+
+        # Flag para detectar obstáculos
+        self.obstacle_detected = False
+
+        # Flags para os sensores laterais
+        self.left_obstacle_detected = False
+        self.right_obstacle_detected = False
+
+        # Variáveis Memory Tool
+
+        self.controller = Controller(dT=self.dt)
+        self.update_params()
+
+        self.start_sim = self.create_publisher(Bool, "/startSimulation", 1)
+        self.pause_sim = self.create_publisher(Bool, "/pauseSimulation", 1)
+
+        self.timer = self.create_timer(self.dt, self.update_position)
+        self.timer.cancel()
+        self.params_timer = self.create_timer(self.dt * 3, self.update_params)
+
+    def setup_parameters(self):
+        self.declare_parameters(
+            namespace="",
+            parameters=[
+                ("c1", 1.5),
+                ("c2", 1.5),
+                ("w", 0.5),
+                ("k", 0.01),
+                ("p", 0.9),
+                ("TRR", 0.9),
+                ("max_speed", 0.2),
+                ("target", [1.0, 1.0]),
+                ("kP", 1.0),
+                ("kI", 0.01),
+                ("kD", 0.01),
+            ],
+        )
+
+    def setup_pub_sub(self):
         self.publisher_ = self.create_publisher(Twist, f"{self.namespace}/cmd_vel", 10)
         self.subscription_pose = self.create_subscription(
             Pose, f"{self.namespace}/pose", self.pose_callback, 10
@@ -117,48 +183,53 @@ class PSOAlgorithm(Node):
             PoseStamped, "/global_best", self.gbest_callback, 10
         )
 
-        self.orientation = Quaternion()
-        self.cmd = Twist()
-        self.pbest = (
-            np.random.rand(2) * 2
-        )  # Exemplo inicial da melhor posição da partícula
-        self.gbest = np.random.rand(2) * 2  # Exemplo inicial da melhor posição global
-        self.current_position = np.zeros(2)  # Posição atual do robô
-        self.velocity = np.zeros(2)  # Velocidade inicial aleatória
+    def setup_pso_variables(self):
+        # Classic PSO variables
+        self.c1 = self.get_parameter("c1").get_parameter_value().double_value
+        self.c2 = self.get_parameter("c2").get_parameter_value().double_value
+        self.w = self.get_parameter("w").get_parameter_value().double_value
 
-        # self.velocity_queue = deque(maxlen=5)
-
-        self.target_position = np.array([5.0, 6.0])
-        self.termination_distance = 0.4
-
-        # Flag para detectar obstáculos
-        self.obstacle_detected = False
-
-        # Flags para os sensores laterais
-        self.left_obstacle_detected = False
-        self.right_obstacle_detected = False
-
-        # Variáveis para AoR
+        # Angle of Rotation (AoR) variables
+        self.k = self.get_parameter_or("k", 0.01).get_parameter_value().double_value
+        self.p = self.get_parameter_or("p", 0.9).get_parameter_value().double_value
+        self.TRR = (
+            self.get_parameter_or("TRR", 0.9).get_parameter_value().double_value
+        )  # Taxa de redução da temperatura
         self.theta = 0.0  # Angulo de rotação
-        self.s = random.choice([-1, 1])  # Direção de rotação dinâmica
+        s_value = 0.5
+        self.s = random.choice([-s_value, s_value])  # Direção de rotação dinâmica
         self.Dc = 0.0  # Probabilidade de mudança de s
         self.T = 0.0  # Temperatura inicial
-        self.TRR = 0.9  # Taxa de redução da temperatura
-        self.k = 0.01
-        self.p = 0.9
 
-        self.timer = self.create_timer(0.1, self.update_position)
-        # self.log_timer = self.create_timer(0.5, self.log_position)
+        # Memory Tool (Mem Tool) variables
+        self.mem = []
+        self.mms = 10  # Maximum Memory Size
+        self.mpr = 0.1  # Memory Point Radius
+        self.md = 0.1  # Minimum Displacement
+        self.mpp1 = 0.1  # Memory Point Penalty 1
+        self.mpp2 = 0.1  # Memory Point Penalty 2
+        self.FFthr = 0.0  # Threshold
 
-        self.controller = Controller(
-            kP=100.0, kI=0.01, kD=0.0001, dT=0.1, v=self.max_speed
+    def update_params(self):
+        # Parâmetros do PSO
+        self.setup_pso_variables()
+
+        # Parâmetros do PID
+        self.max_speed = (
+            self.get_parameter("max_speed").get_parameter_value().double_value
         )
+        kP = self.get_parameter("kP").get_parameter_value().double_value
+        kI = self.get_parameter("kI").get_parameter_value().double_value
+        kD = self.get_parameter("kD").get_parameter_value().double_value
+        self.controller.setPID(kP, kI, kD, v=self.max_speed)
 
-    def log_position(self):
-        pos_str = f"P: {self.current_position[0]:.2f}, {self.current_position[1]:.2f}, {self.evaluate_fitness(self.current_position):.2f}"
-        pbest_str = f"pbest: {self.pbest[0]:.2f}, {self.pbest[1]:.2f}, {self.evaluate_fitness(self.pbest):.2f}"
-        gbest_str = f"gbest: {self.gbest[0]:.2f}, {self.gbest[1]:.2f}, {self.evaluate_fitness(self.gbest):.2f}"
-        self.get_logger().info(f"{pos_str} | {pbest_str} | {gbest_str}")
+        # Emulação de fonte de sinal
+        self.target_position = (
+            np.array(
+                self.get_parameter("target").get_parameter_value().double_array_value
+            )
+            + self.map_offset
+        )
 
     def is_target_reached(self, position=None):
         if position is None:
@@ -167,10 +238,14 @@ class PSOAlgorithm(Node):
 
     def pose_callback(self, msg: Pose):
         # Atualizar a posição atual do robô com os dados do simulador
-        self.current_position[0] = msg.position.x + 5
-        self.current_position[1] = msg.position.y + 5
+        self.current_position[0] = msg.position.x + self.map_offset
+        self.current_position[1] = msg.position.y + self.map_offset
 
         self.orientation = msg.orientation
+
+        if self.timer.is_canceled():
+            self.get_logger().info("PSOAdaptative TIMER started...")
+            self.timer.reset()
 
     def evaluate_bests(self):
         # Avaliação da Aptidão
@@ -191,19 +266,15 @@ class PSOAlgorithm(Node):
 
     def front_sensor_callback(self, msg: Range):
         # Lógica do sensor frontal
-        self.obstacle_detected = msg.range < 0.5 and msg.range > 0
+        self.obstacle_detected = msg.range < 0.3 and msg.range > 0
 
     def left_sensor_callback(self, msg: Range):
         # Lógica do sensor lateral esquerdo
-        self.left_obstacle_detected = msg.range < 0.4 and msg.range > 0
-        if self.obstacle_detected:
-            self.velocity[1] += -0.01
+        self.left_obstacle_detected = msg.range < 0.2 and msg.range > 0
 
     def right_sensor_callback(self, msg: Range):
         # Lógica do sensor lateral direito
-        self.right_obstacle_detected = msg.range < 0.4 and msg.range > 0
-        if self.obstacle_detected:
-            self.velocity[0] -= 0.01
+        self.right_obstacle_detected = msg.range < 0.2 and msg.range > 0
 
     def gbest_callback(self, msg: PoseStamped):
         # Atualizar gbest apenas se o frame_id não for do próprio robô
@@ -219,6 +290,7 @@ class PSOAlgorithm(Node):
         self.gbest_publisher.publish(gbest_msg)
 
     def update_position(self):
+        # self.pause_sim.publish(Bool(data=True))
         # Checar condição de térmno
         if self.is_target_reached():
             self.get_logger().info(f"Robô {self.namespace} achou o alvo!")
@@ -250,14 +322,12 @@ class PSOAlgorithm(Node):
             [np.sin(self.theta), np.cos(self.theta)],
         ]
         RV = np.matmul(RV, self.velocity)
-        # self.velocity_queue.append(RV)
-        # RV = np.mean(self.velocity_queue, axis=0)
 
         self.theta = self.T * self.theta
         self.T = self.TRR * self.T
 
         # Atualizar a posição e velocidade da simulação
-        desired_position = self.current_position + RV
+        desired_position = self.current_position + RV * self.dt
 
         # Evaluate best
         self.evaluate_bests()
@@ -272,6 +342,7 @@ class PSOAlgorithm(Node):
             self.T = 1
             self.Dc = self.Dc + self.k
             if self.Dc > np.random.rand():
+                self.get_logger().info("Change turn direction!")
                 self.s *= -1
                 self.Dc = 0
         else:
@@ -279,23 +350,36 @@ class PSOAlgorithm(Node):
 
         linear_speed, angular_speed = self.controller.iteratePID(
             self.current_position,
-            desired_position,
-            # self.target_position,
+            self.target_position,
+            # desired_position,
             self.orientation,
-            self.get_logger(),
         )
-        # self.get_logger().info(
-        #     f"dx: {linear_speed:.2f} | dy: {angular_speed:.2f} | dp: {self.target_position} | cp: {self.current_position} | object: {self.obstacle_detected}"
-        # )
 
-        if self.obstacle_detected:
-            self.cmd.linear.x -= 0.1
-            self.cmd.angular.z += np.sign(angular_speed) * 0.1
-        else:
-            self.cmd.linear.x = linear_speed
-            self.cmd.angular.z = angular_speed / np.pi * 0.5
+        # Linear speed fixed according to the Temperature, which means that the robot found a obstacle.
+        fixed_linear_speed = linear_speed - self.max_speed * self.T
+
+        # Normalized angular speed to [-max_speed, max_speed]
+        norm_angular_speed = angular_speed
+
+        # Sides obstacle avoidance
+        if self.left_obstacle_detected:
+            norm_angular_speed += -0.001
+        if self.right_obstacle_detected:
+            norm_angular_speed += 0.001
+
+        dx = self.target_position[0] - self.current_position[0]
+        dy = self.target_position[1] - self.current_position[1]
+        angle = np.arctan2(dy, dx)
+
+        self.get_logger().info(
+            f"fix_v: {fixed_linear_speed:.2f}, norm_w: {norm_angular_speed:.2f} | pos: {self.current_position} | target: {self.target_position} | dx: {dx:.2f}, dy: {dy:.2f}, angle: {angle:.2f}"
+        )
+
+        self.cmd.linear.x = fixed_linear_speed
+        self.cmd.angular.z = norm_angular_speed
 
         self.publisher_.publish(self.cmd)
+        # self.start_sim.publish(Bool(data=True))
 
 
 def main(args=None):

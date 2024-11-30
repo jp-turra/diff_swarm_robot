@@ -7,8 +7,16 @@
       target: [1.4, 0.0]
   pso_algorithm:
     ros__parameters:
-      c1: 1.5
+      c1: 0.5
       c2: 0.5
       w: 1.0
-      max_speed: 0.3
+      k: 0.001
+      p: 0.9
+      TRR: 0.5
+      max_speed: 0.2
+      target: [-0.35, 2.875]
+      kP: 1.0
+      kI: 0.00
+      kD: 0.00
+
     
